@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aşkım İçin Küçük Bir Oyun ❤️</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+            background-color: #000;
+        }
+
+        #game-canvas {
+            display: block;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                        url('https://images.unsplash.com/photo-1518131394553-c9710370da20?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 30px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 1000;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .overlay h1 { font-size: 36px; margin-bottom: 20px; color: #ff4d6d; }
+        .overlay p { font-size: 18px; margin-bottom: 30px; line-height: 1.5; }
+        
+        button {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: #ff4d6d;
+            border: none;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 5px 15px rgba(255, 77, 109, 0.4);
+        }
+
+        button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="stat-box">Puan: <span id="score-val">0</span> / 20</div>
+        <div class="stat-box">Can: <span id="lives-val">❤️❤️❤️</span></div>
+    </div>
+
+    <div id="win-screen" class="overlay">
+        <h1>TEBRİKLERRR ❤️</h1>
+               <p>Hepsini topladın!<br>Kazandın bebeğimm <br>Seni çok seviyorum hasanımm
+        <button onclick="resetGame()">Tekrar Oyna</button>
+    </div>
+
+    <div id="lose-screen" class="overlay">
+        <h1>EYVAH! 💣</h1>
+        <p>Yandın sevgilimmm tekrar oynaahadii()!</p>
+        <button o
+       <bu
+
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Görsel Kaynakları -->
+    <div style="display: none;">
+        <!-- Yemleri yiyen obje (Normal hal) -->
+        <img id="normal-img" src="https://i.imgur.com/k8XIpX4.jpeg">
+        <!-- Yem yiyince değişen görsel (Mutlu hal) -->
+        <img id="happy-img" src="https://i.imgur.com/hKBVL0A.png">
+        <!-- Düşen yem görseli -->
+        <img id="item-img" src="https://i.imgur.com/vH6NLfF.jpeg">
+    </div>
+
+    <script>
+       <img id="item-img" src="https://i.imgur.com/vH6NLfF.jpe
+        const ctx = canvas.getContext('2d');
+        const scoreVal = document.getElementById('score-val');
+        const livesVal = document.getElementById('lives-val');
+        
+        const normalImg = document.getElementById('normal-img');
+        const happyImg = document.getElementById('happy-img');
+        const itemImg = document.getElementById('item-img');
+
+        let score = 0;
+        let lives = 3;
+        let isHappy = false;
+        let happyTimeout = null;
+        let gameActive = true;
+
+        const player = {
+            x: 0,
+            y: 0,
+            width: 100, // Görsel boyutlarını biraz optimize ettim
+            height: 100,
+            targetX: 0
+        };
+
+        let items = [];
+        let lastSpawn = 0;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.y = canvas.height - player.height - 50;
+            player.targetX = canvas.width / 2 - player.width / 2;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        const moveHandler = (e) => {
+            if (!gameActive) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            player.targetX = clientX - player.width / 2;
+        };
+
+        window.addEventListener('mousemove', moveHandler);
+        window.addEventListener('touchmove', moveHandler);
+
+        function spawnItem() {
+            const chance = Math.random();
+            let type, content = '';
+            
+            if (chance < 0.75) {
+                type = 'good';
+            } else if (chance < 0.90) {
+                type = 'bad';
+                content = '💣';
+            } else {
+                type = 'bad';
+                content = '💩';
+            }
+
+            items.push({
+                x: Math.random() * (canvas.width - 60),
+                y: -70,
+                width: 60,
+                height: 60,
+                speed: 4 + Math.random() * 3,
+                type: type,
+                content: content
+            });
+        }
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            items = [];
+            gameActive = true;
+            isHappy = false;
+            scoreVal.innerText = score;
+            livesVal.innerText = "❤️❤️❤️";
+            document.getElementById('win-screen').style.display = 'none';
+            document.getElementById('lose-screen').style.display = 'none';
+            requestAnimationFrame(draw);
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // Yumuşak takip hareketi
+            player.x += (player.targetX - player.x) * 0.15;
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                const it = items[i];
+                it.y += it.speed;
+
+                // Çarpışma kontrolü
+                if (
+                    it.y + it.height > player.y + 10 &&
+                    it.x + it.width > player.x + 10 &&
+                    it.x < player.x + player.width - 10 &&
+                    it.y < player.y + player.height
+                ) {
+                    if (it.type === 'good') {
+                        score += 1;
+                        scoreVal.innerText = score;
+                        
+                        // Mutlu görsel tetikleme
+                        isHappy = true;
+                        if (happyTimeout) clearTimeout(happyTimeout);
+                        happyTimeout = setTimeout(() => { isHappy = false; }, 600);
+                        
+                        if (score >= 20) {
+                            gameActive = false;
+                            document.getElementById('win-screen').style.display = 'flex';
+                        }
+                    } else {
+                        lives -= 1;
+                        livesVal.innerText = "❤️".repeat(Math.max(0, lives));
+                        if (lives <= 0) {
+                            gameActive = false;
+                            document.getElementById('lose-screen').style.display = 'flex';
+                        }
+                    }
+                    items.splice(i, 1);
+                    continue;
+                }
+
+                if (it.y > canvas.height) items.splice(i, 1);
+            }
+
+            if (Date.now() - lastSpawn > 800) {
+                spawnItem();
+                lastSpawn = Date.now();
+            }
+        }
+
+        function draw() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Karakteri Çiz (Yuvarlak maske ile daha güzel görünür)
+            const currentImg = isHappy ? happyImg : normalImg;
+            if (currentImg.complete) {
+                ctx.save();
+                // Karakteri yuvarlatılmış köşelerle çizmek için clip kullanabiliriz
+                ctx.beginPath();
+                ctx.roundRect(player.x, player.y, player.width, player.height, 20);
+                ctx.clip();
+                ctx.drawImage(currentImg, player.x, player.y, player.width, player.height);
+                ctx.restore();
+            }
+
+            // Objeleri Çiz
+            items.forEach(it => {
+                if (it.type === 'good' && itemImg.complete) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect(it.x, it.y, it.width, it.height, 10);
+                    ctx.clip();
+                    ctx.drawImage(itemImg, it.x, it.y, it.width, it.height);
+                    ctx.restore();
+                } else if (it.type === 'bad') {
+                    ctx.font = "45px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillText(it.content, it.x + it.width/2, it.y + it.height/2 + 15);
+                }
+            });
+
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        // Başlangıç
+        window.onload = () => {
+            draw();
+        };
+
+    </script>
+</body>
+</html>
+
